@@ -22,6 +22,7 @@ import {
 import {TextInput} from 'react-native-gesture-handler';
 import Item from '../components/Item';
 import SQLite from 'react-native-sqlite-storage';
+import {Calendar, CalendarList, Agenda} from 'react-native-calendars';
 
 const db = SQLite.openDatabase(
   {
@@ -35,6 +36,7 @@ const db = SQLite.openDatabase(
 );
 
 const Stack = createStackNavigator();
+const [currdate, setCurrDate] = useState();
 
 function ScreenDay({navigation}) {
   //States and event handlers
@@ -44,7 +46,6 @@ function ScreenDay({navigation}) {
   const [afternoonfoodItems, afternoonsetFoodItems] = useState([]);
   const [eveningfood, eveningsetFood] = useState();
   const [eveningfoodItems, eveningsetFoodItems] = useState([]);
-  const [currdate, setCurrDate] = useState();
   const appState = useRef(AppState.currentState);
   const [appStateVisible, setAppStateVisible] = useState(appState.current);
 
@@ -88,12 +89,16 @@ function ScreenDay({navigation}) {
           [currdate],
           (tx, results) => {
             let enrty = results.rows;
-            for(var i = 0; i < enrty.length;i++){
-              enrty.item(i).Time == 'Morning'
-                  ? morningsetFoodItems([...morningfoodItems, enrty.item(i).Food])
-                  : enrty.item(i).Time == 'Afternoon'
-                  ? afternoonsetFoodItems([...afternoonfoodItems, enrty.item(i).Food])
-                  : eveningsetFoodItems([...eveningfoodItems, enrty.item(i).Food]);
+            for(var i = 0; i < enrty.length; i++){
+              if(enrty.item(i).Time == 'Morning'){
+                morningsetFoodItems([...morningfoodItems, enrty.item(i).Food]);
+              }
+              else if(enrty.item(i).Time == 'Afternoon'){
+                afternoonsetFoodItems([...afternoonfoodItems, enrty.item(i).Food]);
+              }
+              else{
+                eveningsetFoodItems([...eveningfoodItems, enrty.item(i).Food]);
+              } 
             }
           },
           error => {
@@ -214,6 +219,33 @@ function ScreenDay({navigation}) {
 
   return (
     <ScrollView style={styles.mainContainer}>
+      <Modal>
+      <Calendar
+        current={format(baseDate)}
+        minDate={dateFns.subWeeks(baseDate, 1)}
+        maxDate={dateFns.addWeeks(baseDate, 1)}
+        onDayPress={(day) => {
+          console.log('selected day', day);
+        }}
+        markedDates={getMarkedDates(baseDate, APPOINTMENTS)}
+        theme={{
+          calendarBackground: '#166088',
+
+          selectedDayBackgroundColor: '#C0D6DF',
+          selectedDayTextColor: '#166088',
+          selectedDotColor: '#166088',
+
+          dayTextColor: '#DBE9EE',
+          textDisabledColor: '#729DAF',
+          dotColor: '#DBE9EE',
+
+          monthTextColor: '#DBE9EE',
+          textMonthFontWeight: 'bold',
+
+          arrowColor: '#DBE9EE',
+        }}
+      />
+      </Modal>
       <View>
         <View style={styles.headerwarp}>
           <Text style={styles.text}>Morning</Text>
@@ -317,15 +349,32 @@ function ScreenDay({navigation}) {
 
 function Screenchoose(navigation) {
   return (
-    <View style={styles.mainContainer}>
-      <KeyboardAvoidingView style={styles.writeFoodWrapper}>
-        <TextInput style={styles.input} placeholder={'ex.Apple'} />
-      </KeyboardAvoidingView>
-      <TouchableOpacity>
-        <View style={styles.addWrapper}>
-          <Text style={styles.addFood}>+</Text>
-        </View>
-      </TouchableOpacity>
+    <View style={styles.container}>
+      <Calendar
+        current={format(baseDate)}
+        minDate={dateFns.subWeeks(baseDate, 1)}
+        maxDate={dateFns.addWeeks(baseDate, 1)}
+        onDayPress={(day) => {
+          console.log('selected day', day);
+        }}
+        markedDates={getMarkedDates(baseDate, APPOINTMENTS)}
+        theme={{
+          calendarBackground: '#166088',
+
+          selectedDayBackgroundColor: '#C0D6DF',
+          selectedDayTextColor: '#166088',
+          selectedDotColor: '#166088',
+
+          dayTextColor: '#DBE9EE',
+          textDisabledColor: '#729DAF',
+          dotColor: '#DBE9EE',
+
+          monthTextColor: '#DBE9EE',
+          textMonthFontWeight: 'bold',
+
+          arrowColor: '#DBE9EE',
+        }}
+      />
     </View>
   );
 }
@@ -337,12 +386,24 @@ function App() {
         <Stack.Screen
           name="Day_Screen"
           component={ScreenDay}
-          options={{title: 'Food Tacker'}}
+          options={{title: 'Food Tacker', headerRight: () => (
+            <Button
+              onPress={() => alert('This is a button!')}
+              title="{currdate}"
+              color="#fff"
+            />
+          ),}}
         />
         <Stack.Screen
           name="Screen_choose"
           component={Screenchoose}
-          options={{title: 'Food Tacker'}}
+          options={{title: 'Food Tacker', headerRight: () => (
+            <Button
+              onPress={() => alert('This is a button!')}
+              title="{currdate}"
+              color="#fff"
+            />
+          ),}}
         />
       </Stack.Navigator>
     </NavigationContainer>

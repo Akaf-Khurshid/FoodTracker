@@ -18,6 +18,7 @@ import {
   TouchableOpacity,
   View,
   AppState,
+  Button,
 } from 'react-native';
 import {TextInput} from 'react-native-gesture-handler';
 import Item from '../components/Item';
@@ -36,7 +37,7 @@ const db = SQLite.openDatabase(
 );
 
 const Stack = createStackNavigator();
-const [currdate, setCurrDate] = useState();
+
 
 function ScreenDay({navigation}) {
   //States and event handlers
@@ -48,6 +49,7 @@ function ScreenDay({navigation}) {
   const [eveningfoodItems, eveningsetFoodItems] = useState([]);
   const appState = useRef(AppState.currentState);
   const [appStateVisible, setAppStateVisible] = useState(appState.current);
+  const [currdate, setCurrDate] = useState();
 
   const createTable = () => {
     db.transaction(tx => {
@@ -158,6 +160,7 @@ function ScreenDay({navigation}) {
       '-' +
       today.getFullYear();
     setCurrDate(date);
+    navigation.navigate('Day_Screen', { date: date });
     const subscription = AppState.addEventListener('change', nextAppState => {
       if (
         appState.current.match(/inactive|background/) &&
@@ -217,35 +220,18 @@ function ScreenDay({navigation}) {
     eveningsetFoodItems(foodCopy);
   };
 
+  // React.useLayoutEffect(()=>{
+  //   navigation.setOptions({
+  //     headerRight: ()=>(
+  //       <Button title=cuurdat
+  //     )
+  //   })
+  // })
+  
+
   return (
     <ScrollView style={styles.mainContainer}>
-      <Modal>
-      <Calendar
-        current={format(baseDate)}
-        minDate={dateFns.subWeeks(baseDate, 1)}
-        maxDate={dateFns.addWeeks(baseDate, 1)}
-        onDayPress={(day) => {
-          console.log('selected day', day);
-        }}
-        markedDates={getMarkedDates(baseDate, APPOINTMENTS)}
-        theme={{
-          calendarBackground: '#166088',
-
-          selectedDayBackgroundColor: '#C0D6DF',
-          selectedDayTextColor: '#166088',
-          selectedDotColor: '#166088',
-
-          dayTextColor: '#DBE9EE',
-          textDisabledColor: '#729DAF',
-          dotColor: '#DBE9EE',
-
-          monthTextColor: '#DBE9EE',
-          textMonthFontWeight: 'bold',
-
-          arrowColor: '#DBE9EE',
-        }}
-      />
-      </Modal>
+      
       <View>
         <View style={styles.headerwarp}>
           <Text style={styles.text}>Morning</Text>
@@ -386,24 +372,25 @@ function App() {
         <Stack.Screen
           name="Day_Screen"
           component={ScreenDay}
-          options={{title: 'Food Tacker', headerRight: () => (
+          options={({ route })=>({headerTitle: 'Food Tacker', headerRight: () => (
             <Button
               onPress={() => alert('This is a button!')}
-              title="{currdate}"
-              color="#fff"
+              title= {route.params.name}
+              color= "#00cc00"
             />
-          ),}}
+          ),})}
         />
         <Stack.Screen
           name="Screen_choose"
           component={Screenchoose}
-          options={{title: 'Food Tacker', headerRight: () => (
+          options={({ route })=>({headerTitle: 'Food Tacker',  headerRight: () => (
             <Button
               onPress={() => alert('This is a button!')}
-              title="{currdate}"
-              color="#fff"
+              title= {route.params.date}
+              color= "#00cc00"
             />
-          ),}}
+          ),
+        })}
         />
       </Stack.Navigator>
     </NavigationContainer>

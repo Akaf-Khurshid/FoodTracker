@@ -19,6 +19,7 @@ import {
   View,
   AppState,
   Button,
+  Modal,
 } from 'react-native';
 import {TextInput} from 'react-native-gesture-handler';
 import Item from '../components/Item';
@@ -41,6 +42,7 @@ const Stack = createStackNavigator();
 
 function ScreenDay({navigation}) {
   //States and event handlers
+  // let onetime = false;
   const [morningfood, morningsetFood] = useState();
   const [morningfoodItems, morningsetFoodItems] = useState([]);
   const [afternoonfood, afternoonsetFood] = useState();
@@ -50,6 +52,7 @@ function ScreenDay({navigation}) {
   const appState = useRef(AppState.currentState);
   const [appStateVisible, setAppStateVisible] = useState(appState.current);
   const [currdate, setCurrDate] = useState();
+  const [modalVisible, setModalVisible] = useState(false);
 
   const createTable = () => {
     db.transaction(tx => {
@@ -152,31 +155,10 @@ function ScreenDay({navigation}) {
   useEffect(() => {
     createTable();
     getData();
-    let today = new Date();
-    let date =
-      today.getDate() +
-      '-' +
-      parseInt(today.getMonth() + 1) +
-      '-' +
-      today.getFullYear();
+      let today = new Date();
+      let date = today.getFullYear() + '-' + parseInt(today.getMonth() + 1) + '-' + today.getDate();
     setCurrDate(date);
-    navigation.navigate('Day_Screen', { date: date });
-    const subscription = AppState.addEventListener('change', nextAppState => {
-      if (
-        appState.current.match(/inactive|background/) &&
-        nextAppState === 'active'
-      ) {
-        getData();
-      }
-
-      appState.current = nextAppState;
-      setAppStateVisible(appState.current);
-      console.log('AppState', appState.current);
-    });
-
-    return () => {
-      subscription.remove();
-    };
+    console.log(String(currdate));
   }, []);
 
   const morninghandleAddFood = () => {
@@ -220,18 +202,33 @@ function ScreenDay({navigation}) {
     eveningsetFoodItems(foodCopy);
   };
 
-  // React.useLayoutEffect(()=>{
-  //   navigation.setOptions({
-  //     headerRight: ()=>(
-  //       <Button title=cuurdat
-  //     )
-  //   })
-  // })
+  const handleCalendar = (day) =>{
+    setModalVisible(!modalVisible);
+    setCurrDate(day.dateString);
+    console.log(currdate);
+  }
+
+
+  React.useLayoutEffect(()=>{
+    navigation.setOptions({
+      headerRight: ()=>(
+        <Button title={String(currdate)} onPress={ () => setModalVisible(true)}/>
+      )
+    })
+  },[navigation])
   
 
   return (
     <ScrollView style={styles.mainContainer}>
-      
+      <Modal
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={(day) => {
+          setModalVisible(!modalVisible);
+        }}>
+        <Calendar onDayPress={handleCalendar}
+        />
+      </Modal>
       <View>
         <View style={styles.headerwarp}>
           <Text style={styles.text}>Morning</Text>
@@ -372,24 +369,12 @@ function App() {
         <Stack.Screen
           name="Day_Screen"
           component={ScreenDay}
-          options={({ route })=>({headerTitle: 'Food Tacker', headerRight: () => (
-            <Button
-              onPress={() => alert('This is a button!')}
-              title= {route.params.name}
-              color= "#00cc00"
-            />
-          ),})}
+          options={{headerTitle: 'Food Tacker'}}
         />
         <Stack.Screen
           name="Screen_choose"
           component={Screenchoose}
-          options={({ route })=>({headerTitle: 'Food Tacker',  headerRight: () => (
-            <Button
-              onPress={() => alert('This is a button!')}
-              title= {route.params.date}
-              color= "#00cc00"
-            />
-          ),
+          options={({ route })=>({headerTitle: 'Food Tacker'
         })}
         />
       </Stack.Navigator>
@@ -445,6 +430,9 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     bottom: 5,
+  },
+  button:{
+    margin: 5,
   },
 });
 

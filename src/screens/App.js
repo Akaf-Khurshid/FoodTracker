@@ -54,7 +54,7 @@ function ScreenDay({navigation}) {
         'CREATE TABLE IF NOT EXISTS Foodentry (ID INTEGER PRIMARY KEY AUTOINCREMENT, Date TEXT, Time TEXT, Food TEXT)'
         ,
         [],
-        () => {console.log('creating table')},
+        () => {},
         error => {
           console.log('error creating table ' + error.message);
         }
@@ -69,9 +69,7 @@ function ScreenDay({navigation}) {
         tx.executeSql(
           "INSERT INTO Foodentry (Date, Time, Food) VALUES (?,?,?)",
         [currdate, time, food],
-        (tx, results) => {
-          console.log(currdate, time, food);
-        },
+        () => {},
         error => {
           console.log(error);
         }
@@ -89,16 +87,14 @@ function ScreenDay({navigation}) {
           'SELECT Time, Food FROM Foodentry WHERE Date=?',
           [currdate],
           (tx, results) => {
-
-            console.log(results.rows.item(0).Food);
-              // results.rows.map((item, index) => {
-               
-              //   time == 'Morning'
-              //     ? morningsetFoodItems([...morningfoodItems, food])
-              //     : time == 'Afternoon'
-              //     ? afternoonsetFoodItems([...afternoonfoodItems, food])
-              //     : eveningsetFoodItems([...eveningfoodItems, food]);
-              // });
+            let enrty = results.rows;
+            for(var i = 0; i < enrty.length;i++){
+              enrty.item(i).Time == 'Morning'
+                  ? morningsetFoodItems([...morningfoodItems, enrty.item(i).Food])
+                  : enrty.item(i).Time == 'Afternoon'
+                  ? afternoonsetFoodItems([...afternoonfoodItems, enrty.item(i).Food])
+                  : eveningsetFoodItems([...eveningfoodItems, enrty.item(i).Food]);
+            }
           },
           error => {
             console.log(error);
@@ -118,9 +114,7 @@ function ScreenDay({navigation}) {
           time,
           food,
         ],
-        (tx, results) => {
-          console.log('REMOED');
-        },
+        () => {},
         error => {
           console.log(error);
         },
@@ -206,6 +200,7 @@ function ScreenDay({navigation}) {
   };
 
   const eveninghandleAddFood = () => {
+    getData();
     Keyboard.dismiss();
     eveningsetFoodItems([...eveningfoodItems, eveningfood]);
     eveningsetFood(null);

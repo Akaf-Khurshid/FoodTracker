@@ -43,15 +43,16 @@ const Stack = createStackNavigator();
 function ScreenDay({navigation}) {
   //States and event handlers
   // let onetime = false;
+
+  let date = new Date();
+  let today = date.toISOString().split('T')[0];
   const [morningfood, morningsetFood] = useState();
   const [morningfoodItems, morningsetFoodItems] = useState([]);
   const [afternoonfood, afternoonsetFood] = useState();
   const [afternoonfoodItems, afternoonsetFoodItems] = useState([]);
   const [eveningfood, eveningsetFood] = useState();
   const [eveningfoodItems, eveningsetFoodItems] = useState([]);
-  const appState = useRef(AppState.currentState);
-  const [appStateVisible, setAppStateVisible] = useState(appState.current);
-  const [currdate, setCurrDate] = useState();
+  const [currdate, setCurrDate] = useState(today);
   const [modalVisible, setModalVisible] = useState(false);
 
   const createTable = () => {
@@ -70,6 +71,7 @@ function ScreenDay({navigation}) {
   };
 
   const insertData = async (time, food) => {
+    console.log(currdate,food,time);
     try {
       await db.transaction(async tx => {
         tx.executeSql(
@@ -96,13 +98,13 @@ function ScreenDay({navigation}) {
             let enrty = results.rows;
             for(var i = 0; i < enrty.length; i++){
               if(enrty.item(i).Time == 'Morning'){
-                morningsetFoodItems([...morningfoodItems, enrty.item(i).Food]);
+                morningsetFoodItems(morningfoodItems => [...morningfoodItems, enrty.item(i).Food]);
               }
               else if(enrty.item(i).Time == 'Afternoon'){
-                afternoonsetFoodItems([...afternoonfoodItems, enrty.item(i).Food]);
+                afternoonsetFoodItems(afternoonfoodItems => [...afternoonfoodItems, enrty.item(i).Food]);
               }
               else{
-                eveningsetFoodItems([...eveningfoodItems, enrty.item(i).Food]);
+                eveningsetFoodItems(eveningfoodItems => [...eveningfoodItems, enrty.item(i).Food]);
               } 
             }
           },
@@ -138,8 +140,7 @@ function ScreenDay({navigation}) {
   const clearTable = () => {
     try {
       db.transaction(tx => {
-        tx.executeSql('DELETE FROM Foodentry WHERE Date=?', [
-          currdate,],
+        tx.executeSql('DELETE FROM Foodentry', [],
         () => {
         },
         error => {
@@ -155,80 +156,94 @@ function ScreenDay({navigation}) {
   useEffect(() => {
     createTable();
     getData();
-      let today = new Date();
-      let date = today.getFullYear() + '-' + parseInt(today.getMonth() + 1) + '-' + today.getDate();
-    setCurrDate(date);
-    console.log(String(currdate));
-  }, []);
+    navigation.setOptions({
+      headerRight: ()=>(
+        <Buttondate/>
+      )
+    })
+  },[currdate]);
+
+
 
   const morninghandleAddFood = () => {
     Keyboard.dismiss();
     insertData('Morning', morningfood);
     morningsetFoodItems([...morningfoodItems, morningfood]);
     morningsetFood(null);
-    getData();
   };
 
   const morningremoveFood = (index, item) => {
-    removeData('Morning', item);
+    removeData('Morning',item);
     let foodCopy = [...morningfoodItems];
     foodCopy.splice(index, 1);
     morningsetFoodItems(foodCopy);
   };
 
   const afternoonhandleAddFood = () => {
-    clearTable();
     Keyboard.dismiss();
+    insertData('Afternoon', afternoonfood);
     afternoonsetFoodItems([...afternoonfoodItems, afternoonfood]);
     afternoonsetFood(null);
   };
 
-  const afternoonremoveFood = index => {
+  const afternoonremoveFood = (index, item)  => {
+    removeData('Afternoon',item);
     let foodCopy = [...afternoonfoodItems];
     foodCopy.splice(index, 1);
     afternoonsetFoodItems(foodCopy);
   };
 
   const eveninghandleAddFood = () => {
-    getData();
     Keyboard.dismiss();
+    insertData('Evening', eveningfood);
     eveningsetFoodItems([...eveningfoodItems, eveningfood]);
     eveningsetFood(null);
   };
 
-  const eveningremoveFood = index => {
+  const eveningremoveFood = (index, item)  => {
+    removeData('Evening',item);
     let foodCopy = [...eveningfoodItems];
     foodCopy.splice(index, 1);
     eveningsetFoodItems(foodCopy);
   };
 
-  const handleCalendar = (day) =>{
-    setModalVisible(!modalVisible);
-    setCurrDate(day.dateString);
-    console.log(currdate);
+
+
+  const Buttondate = () => {
+    return(
+      <Button title={currdate} onPress={ () => {
+        navigation.setOptions({ title: {currdate} })
+        setModalVisible(true);
+      }
+      }/>
+    )
   }
 
-
-  React.useLayoutEffect(()=>{
-    navigation.setOptions({
-      headerRight: ()=>(
-        <Button title={String(currdate)} onPress={ () => setModalVisible(true)}/>
-      )
-    })
-  },[navigation])
-  
+  function handlerCalendar(day){
+    setCurrDate(day.dateString);
+    setModalVisible(!modalVisible);
+    morningsetFoodItems([]);
+    afternoonsetFoodItems([]);
+    eveningsetFoodItems([]);
+  }
 
   return (
     <ScrollView style={styles.mainContainer}>
-      <Modal
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={(day) => {
-          setModalVisible(!modalVisible);
-        }}>
-        <Calendar onDayPress={handleCalendar}
-        />
-      </Modal>
+      <View>
+        <Modal
+          transparent={true}
+          visible={modalVisible}
+          onRequestClose={(day) => {
+            setModalVisible(!modalVisible);
+          }}>
+          <Calendar  
+          onDayPress={day => {
+            handlerCalendar(day)
+          }}
+          initialDate={currdate}
+           />
+        </Modal>
+      </View>
       <View>
         <View style={styles.headerwarp}>
           <Text style={styles.text}>Morning</Text>
@@ -288,7 +303,7 @@ function ScreenDay({navigation}) {
               <Item
                 key={index}
                 text={item}
-                onPress={() => afternoonremoveFood(index)}
+                onPress={() => afternoonremoveFood(index, item)}
               />
             );
           })}
@@ -320,7 +335,7 @@ function ScreenDay({navigation}) {
               <Item
                 key={index}
                 text={item}
-                onPress={() => eveningremoveFood(index)}
+                onPress={() => eveningremoveFood(index, item)}
               />
             );
           })}
@@ -330,37 +345,36 @@ function ScreenDay({navigation}) {
   );
 }
 
-function Screenchoose(navigation) {
-  return (
-    <View style={styles.container}>
-      <Calendar
-        current={format(baseDate)}
-        minDate={dateFns.subWeeks(baseDate, 1)}
-        maxDate={dateFns.addWeeks(baseDate, 1)}
-        onDayPress={(day) => {
-          console.log('selected day', day);
-        }}
-        markedDates={getMarkedDates(baseDate, APPOINTMENTS)}
-        theme={{
-          calendarBackground: '#166088',
+// function Screenchoose(navigation) {
+//   return (
+//     <View style={styles.container}>
+//       <Calendar
+//         current={format(baseDate)}
+//         minDate={dateFns.subWeeks(baseDate, 1)}
+//         maxDate={dateFns.addWeeks(baseDate, 1)}
+//         onDayPress={(day) => {
+//           console.log('selected day', day);
+//         }}
+//         theme={{
+//           calendarBackground: '#166088',
 
-          selectedDayBackgroundColor: '#C0D6DF',
-          selectedDayTextColor: '#166088',
-          selectedDotColor: '#166088',
+//           selectedDayBackgroundColor: '#C0D6DF',
+//           selectedDayTextColor: '#166088',
+//           selectedDotColor: '#166088',
 
-          dayTextColor: '#DBE9EE',
-          textDisabledColor: '#729DAF',
-          dotColor: '#DBE9EE',
+//           dayTextColor: '#DBE9EE',
+//           textDisabledColor: '#729DAF',
+//           dotColor: '#DBE9EE',
 
-          monthTextColor: '#DBE9EE',
-          textMonthFontWeight: 'bold',
+//           monthTextColor: '#DBE9EE',
+//           textMonthFontWeight: 'bold',
 
-          arrowColor: '#DBE9EE',
-        }}
-      />
-    </View>
-  );
-}
+//           arrowColor: '#DBE9EE',
+//         }}
+//       />
+//     </View>
+//   );
+// }
 
 function App() {
   return (
@@ -371,12 +385,11 @@ function App() {
           component={ScreenDay}
           options={{headerTitle: 'Food Tacker'}}
         />
-        <Stack.Screen
+        {/* <Stack.Screen
           name="Screen_choose"
           component={Screenchoose}
-          options={({ route })=>({headerTitle: 'Food Tacker'
-        })}
-        />
+          options={({ route })=>({headerTitle: 'Food Tacker'})}
+        /> */}
       </Stack.Navigator>
     </NavigationContainer>
   );

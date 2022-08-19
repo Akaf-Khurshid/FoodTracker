@@ -40,25 +40,31 @@ const db = SQLite.openDatabase(
 const Stack = createStackNavigator();
 
 
+
 function ScreenDay({navigation}) {
   //States and event handlers
   // let onetime = false;
 
+
+
   let date = new Date();
   let today = date.toISOString().split('T')[0];
-  const [morningfood, morningsetFood] = useState();
+  const [morningfood, morningsetFood] = useState({name: "", protein:null, carb: null, fat:null, calories:null});
   const [morningfoodItems, morningsetFoodItems] = useState([]);
-  const [afternoonfood, afternoonsetFood] = useState();
+  const [afternoonfood, afternoonsetFood] = useState({name: "", protein:null, carb: null, fat:null, calories:null});
   const [afternoonfoodItems, afternoonsetFoodItems] = useState([]);
-  const [eveningfood, eveningsetFood] = useState();
+  const [eveningfood, eveningsetFood] = useState({name: "", protein:null, carb: null, fat:null, calories:null});
   const [eveningfoodItems, eveningsetFoodItems] = useState([]);
   const [currdate, setCurrDate] = useState(today);
   const [modalVisible, setModalVisible] = useState(false);
-
+  const [totalprotein, setTotalProtein] = useState(0);
+  const [totalcarb, setTotalCarb] = useState(0);
+  const [totafat, setTotalFat] = useState(0);
+  const [totalcalories, setTotalCalories] = useState(0);
   const createTable = () => {
     db.transaction(tx => {
       tx.executeSql(
-        'CREATE TABLE IF NOT EXISTS Foodentry (ID INTEGER PRIMARY KEY AUTOINCREMENT, Date TEXT, Time TEXT, Food TEXT)'
+        'CREATE TABLE IF NOT EXISTS Foodentry (ID INTEGER PRIMARY KEY AUTOINCREMENT, Date TEXT, Time TEXT, Food TEXT, Protein TEXT, Carb TEXT, Fat TEXT, Calories TEXT)'
         ,
         [],
         () => {},
@@ -71,12 +77,11 @@ function ScreenDay({navigation}) {
   };
 
   const insertData = async (time, food) => {
-    console.log(currdate,food,time);
     try {
       await db.transaction(async tx => {
         tx.executeSql(
-          "INSERT INTO Foodentry (Date, Time, Food) VALUES (?,?,?)",
-        [currdate, time, food],
+          "INSERT INTO Foodentry (Date, Time, Food, Protein, Carb, Fat, Calories) VALUES (?,?,?,?,?,?,?)",
+        [currdate, time, food.name, food.protein, food.carb, food.fat, food.calories],
         () => {},
         error => {
           console.log(error);
@@ -92,20 +97,24 @@ function ScreenDay({navigation}) {
     try {
       db.transaction(tx => {
         tx.executeSql(
-          'SELECT Time, Food FROM Foodentry WHERE Date=?',
+          'SELECT * FROM Foodentry WHERE Date=?',
           [currdate],
           (tx, results) => {
             let enrty = results.rows;
             for(var i = 0; i < enrty.length; i++){
               if(enrty.item(i).Time == 'Morning'){
-                morningsetFoodItems(morningfoodItems => [...morningfoodItems, enrty.item(i).Food]);
+                morningsetFoodItems(morningfoodItems => [...morningfoodItems, {name: enrty.item(i).Food, protein: enrty.item(i).Protein, carb: enrty.item(i).Carb, fat: enrty.item(i).Fat, calories: enrty.item(i).Calories}]);
               }
               else if(enrty.item(i).Time == 'Afternoon'){
-                afternoonsetFoodItems(afternoonfoodItems => [...afternoonfoodItems, enrty.item(i).Food]);
+                afternoonsetFoodItems(afternoonfoodItems => [...afternoonfoodItems, {name: enrty.item(i).Food, protein: enrty.item(i).Protein, carb: enrty.item(i).Carb, fat: enrty.item(i).Fat, calories: enrty.item(i).Calories}]);
               }
               else{
-                eveningsetFoodItems(eveningfoodItems => [...eveningfoodItems, enrty.item(i).Food]);
+                eveningsetFoodItems(eveningfoodItems => [...eveningfoodItems, {name: enrty.item(i).Food, protein: enrty.item(i).Protein, carb: enrty.item(i).Carb, fat: enrty.item(i).Fat, calories: enrty.item(i).Calories}]);
               } 
+              setTotalProtein(totalprotein => Number(totalprotein)+Number(enrty.item(i).Protein));
+              setTotalCarb(totalcarb => Number(totalcarb)+Number(enrty.item(i).Carb));
+              setTotalFat(totafat => Number(totafat)+Number(enrty.item(i).Fat));
+              setTotalCalories(totalcalories => Number(totalcalories)+Number(enrty.item(i).Calories));
             }
           },
           error => {
@@ -121,10 +130,9 @@ function ScreenDay({navigation}) {
   const removeData = (time, food) => {
     try {
       db.transaction(tx => {
-        tx.executeSql('DELETE FROM Foodentry WHERE Date=? AND Time=? AND Food=?', [
-          currdate,
-          time,
-          food,
+        tx.executeSql('DELETE FROM Foodentry WHERE Date=? AND Time=? AND Food=? AND Protein=? AND Carb=? AND Fat=? AND Calories=?', 
+        [
+          currdate,time,food.name,food.protein,food.carb,food.fat,food.calories
         ],
         () => {},
         error => {
@@ -140,7 +148,7 @@ function ScreenDay({navigation}) {
   const clearTable = () => {
     try {
       db.transaction(tx => {
-        tx.executeSql('DELETE FROM Foodentry', [],
+        tx.executeSql('DROP TABLE Foodentry', [],
         () => {
         },
         error => {
@@ -169,7 +177,11 @@ function ScreenDay({navigation}) {
     Keyboard.dismiss();
     insertData('Morning', morningfood);
     morningsetFoodItems([...morningfoodItems, morningfood]);
-    morningsetFood(null);
+    morningsetFood({name: "", protein:null, carb: null, fat:null, calories:null});
+    setTotalProtein(Number(totalprotein)+Number(morningfood.protein));
+    setTotalCarb(Number(totalcarb)+Number(morningfood.carb));
+    setTotalFat(Number(totafat)+Number(morningfood.fat));
+    setTotalCalories(Number(totalcalories)+Number(morningfood.calories))
   };
 
   const morningremoveFood = (index, item) => {
@@ -177,13 +189,22 @@ function ScreenDay({navigation}) {
     let foodCopy = [...morningfoodItems];
     foodCopy.splice(index, 1);
     morningsetFoodItems(foodCopy);
+    setTotalProtein(Number(totalprotein)-Number(item.protein));
+    setTotalCarb(Number(totalcarb)-Number(item.carb));
+    setTotalFat(Number(totafat)-Number(item.fat));
+    setTotalCalories(Number(totalcalories)-Number(item.calories))
   };
 
   const afternoonhandleAddFood = () => {
+    // clearTable();
     Keyboard.dismiss();
     insertData('Afternoon', afternoonfood);
     afternoonsetFoodItems([...afternoonfoodItems, afternoonfood]);
-    afternoonsetFood(null);
+    afternoonsetFood({name: "", protein:null, carb: null, fat:null, calories:null});
+    setTotalProtein(Number(totalprotein)+Number(afternoonfood.protein));
+    setTotalCarb(Number(totalcarb)+Number(afternoonfood.carb));
+    setTotalFat(Number(totafat)+Number(afternoonfood.fat));
+    setTotalCalories(Number(totalcalories)+Number(afternoonfood.calories))
   };
 
   const afternoonremoveFood = (index, item)  => {
@@ -191,13 +212,21 @@ function ScreenDay({navigation}) {
     let foodCopy = [...afternoonfoodItems];
     foodCopy.splice(index, 1);
     afternoonsetFoodItems(foodCopy);
+    setTotalProtein(Number(totalprotein)-Number(item.protein));
+    setTotalCarb(Number(totalcarb)-Number(item.carb));
+    setTotalFat(Number(totafat)-Number(item.fat));
+    setTotalCalories(Number(totalcalories)-Number(item.calories))
   };
 
   const eveninghandleAddFood = () => {
     Keyboard.dismiss();
     insertData('Evening', eveningfood);
     eveningsetFoodItems([...eveningfoodItems, eveningfood]);
-    eveningsetFood(null);
+    eveningsetFood({name: "", protein:null, carb: null, fat:null, calories:null});
+    setTotalProtein(Number(totalprotein)+Number(eveningfood.protein));
+    setTotalCarb(Number(totalcarb)+Number(eveningfood.carb));
+    setTotalFat(Number(totafat)+Number(eveningfood.fat));
+    setTotalCalories(Number(totalcalories)+Number(eveningfood.calories))
   };
 
   const eveningremoveFood = (index, item)  => {
@@ -205,6 +234,10 @@ function ScreenDay({navigation}) {
     let foodCopy = [...eveningfoodItems];
     foodCopy.splice(index, 1);
     eveningsetFoodItems(foodCopy);
+    setTotalProtein(Number(totalprotein)-Number(item.protein));
+    setTotalCarb(Number(totalcarb)-Number(item.carb));
+    setTotalFat(Number(totafat)-Number(item.fat));
+    setTotalCalories(Number(totalcalories)-Number(item.calories))
   };
 
 
@@ -225,6 +258,10 @@ function ScreenDay({navigation}) {
     morningsetFoodItems([]);
     afternoonsetFoodItems([]);
     eveningsetFoodItems([]);
+    setTotalFat(0);
+    setTotalCarb(0);
+    setTotalProtein(0);
+    setTotalCalories(0);
   }
 
   return (
@@ -246,14 +283,58 @@ function ScreenDay({navigation}) {
       </View>
       <View>
         <View style={styles.headerwarp}>
+          <Text>Calories {totalcalories}</Text>
+          <Text>Protein {totalprotein}</Text>
+          <Text>Carb {totalcarb}</Text>
+          <Text>Fat {totafat}</Text>
+        </View>
+        <View style={styles.headerwarp}>
           <Text style={styles.text}>Morning</Text>
           <View>
             <KeyboardAvoidingView style={styles.writeFoodWrapper}>
               <TextInput
                 style={styles.input}
-                placeholder={'ex.Apple'}
-                value={morningfood}
-                onChangeText={text => morningsetFood(text)}
+                placeholder={'Name'}
+                value={morningfood.name}
+                onChangeText={text => morningsetFood(prevState => ({
+                  ...prevState, name: text
+                }))}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder={'Calories'}
+                keyboardType="numeric"
+                value={morningfood.calories}
+                onChangeText={text => morningsetFood(prevState => ({
+                  ...prevState, calories: text
+                }))}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder={'Protein'}
+                keyboardType="numeric"
+                value={morningfood.protein}
+                onChangeText={text => morningsetFood(prevState => ({
+                  ...prevState, protein: text
+                }))}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder={'Fat'}
+                keyboardType="numeric"
+                value={morningfood.fat}
+                onChangeText={text => morningsetFood(prevState => ({
+                  ...prevState, fat: text
+                }))}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder={'Carb'}
+                keyboardType="numeric"
+                value={morningfood.carb}
+                onChangeText={text => morningsetFood(prevState => ({
+                  ...prevState, carb: text
+                }))}
               />
             </KeyboardAvoidingView>
             <TouchableOpacity
@@ -281,11 +362,49 @@ function ScreenDay({navigation}) {
           <Text style={styles.text}>Afternoon</Text>
           <View>
             <KeyboardAvoidingView style={styles.writeFoodWrapper}>
+            <TextInput
+                style={styles.input}
+                placeholder={'Name'}
+                value={afternoonfood.name}
+                onChangeText={text => afternoonsetFood(prevState => ({
+                  ...prevState, name: text
+                }))}
+              />
               <TextInput
                 style={styles.input}
-                placeholder={'ex.Apple'}
-                value={afternoonfood}
-                onChangeText={text => afternoonsetFood(text)}
+                placeholder={'Calories'}
+                keyboardType="numeric"
+                value={afternoonfood.calories}
+                onChangeText={text => afternoonsetFood(prevState => ({
+                  ...prevState, calories: text
+                }))}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder={'Protein'}
+                keyboardType="numeric"
+                value={afternoonfood.protein}
+                onChangeText={text => afternoonsetFood(prevState => ({
+                  ...prevState, protein: text
+                }))}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder={'Fat'}
+                keyboardType="numeric"
+                value={afternoonfood.fat}
+                onChangeText={text => afternoonsetFood(prevState => ({
+                  ...prevState, fat: text
+                }))}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder={'Carb'}
+                keyboardType="numeric"
+                value={afternoonfood.carb}
+                onChangeText={text => afternoonsetFood(prevState => ({
+                  ...prevState, carb: text
+                }))}
               />
             </KeyboardAvoidingView>
             <TouchableOpacity
@@ -313,11 +432,49 @@ function ScreenDay({navigation}) {
           <Text style={styles.text}>Eveing</Text>
           <View>
             <KeyboardAvoidingView style={styles.writeFoodWrapper}>
+            <TextInput
+                style={styles.input}
+                placeholder={'Name'}
+                value={eveningfood.name}
+                onChangeText={text => eveningsetFood(prevState => ({
+                  ...prevState, name: text
+                }))}
+              />
               <TextInput
                 style={styles.input}
-                placeholder={'ex.Apple'}
-                value={eveningfood}
-                onChangeText={text => eveningsetFood(text)}
+                placeholder={'Calories'}
+                keyboardType="numeric"
+                value={eveningfood.calories}
+                onChangeText={text => eveningsetFood(prevState => ({
+                  ...prevState, calories: text
+                }))}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder={'Protein'}
+                keyboardType="numeric"
+                value={eveningfood.protein}
+                onChangeText={text => eveningsetFood(prevState => ({
+                  ...prevState, protein: text
+                }))}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder={'Fat'}
+                keyboardType="numeric"
+                value={eveningfood.fat}
+                onChangeText={text => eveningsetFood(prevState => ({
+                  ...prevState, fat: text
+                }))}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder={'Carb'}
+                keyboardType="numeric"
+                value={eveningfood.carb}
+                onChangeText={text => eveningsetFood(prevState => ({
+                  ...prevState, carb: text
+                }))}
               />
             </KeyboardAvoidingView>
             <TouchableOpacity
@@ -416,7 +573,7 @@ const styles = StyleSheet.create({
   },
   writeFoodWrapper: {
     position: 'absolute',
-    right: 255,
+    right: 1000,
     width: '100%',
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -424,7 +581,8 @@ const styles = StyleSheet.create({
   },
   input: {
     padding: 15,
-    width: 250,
+    width: 200,
+    margin: 'auto',
     backgroundColor: '#ff667f',
     borderRadius: 60,
     bottom: 20,

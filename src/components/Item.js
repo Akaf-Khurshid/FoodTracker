@@ -7,7 +7,11 @@ const Item = (props) =>{
     return (
       <View style={styles.itemwrap}>
         <View style={styles.item}>
-          <Text style={styles.itemText}>{props.text}</Text>
+          <Text style={styles.itemText}>Name: {props.text.name}</Text>
+          <Text style={styles.itemText}>Calories: {props.text.calories}</Text>
+          <Text style={styles.itemText}>Protein: {props.text.protein}</Text>
+          <Text style={styles.itemText}>Carb: {props.text.carb}</Text>
+          <Text style={styles.itemText}>Fat: {props.text.fat}</Text>
         </View>
         <TouchableOpacity style={styles.square} onPress={props.onPress}>
             <Text style={styles.remove}>-</Text>
@@ -30,6 +34,7 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         // flexWrap: "wrap",
+        justifyContent: "space-between",
         width: '80%'
     },
     square: {
